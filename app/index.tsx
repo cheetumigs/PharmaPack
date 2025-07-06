@@ -26,27 +26,29 @@ export default function Index() {
   return (
     <View style={styles.container}>
       {/* Logo */}
-      <Image 
-        source={{ uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-ypPGjimmPdg19KeZvhs7f3UNCGCXYl.png' }}
+      <Image
+        source={require("./images/PharmaPack.png")}
         style={styles.logo}
         resizeMode="contain"
       />
-      
+
       {/* App Title */}
       <Text style={styles.title}>Welcome</Text>
-      <Text style={styles.subtitle}>Manage your tasks efficiently</Text>
-      
+      <Text style={styles.subtitle}>
+        Packaged with love, opened with trust.
+      </Text>
+
       {/* Buttons Container */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.primaryButton]} 
+        <TouchableOpacity
+          style={[styles.button, styles.primaryButton]}
           onPress={handleCheckDetails}
         >
           <Text style={styles.primaryButtonText}>Check Details</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.secondaryButton]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
           onPress={handleSetReminder}
         >
           <Text style={styles.secondaryButtonText}>Set Reminder</Text>
@@ -62,12 +64,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F5F5DC",
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 30,
+    width: 300,
+    height: 300,
+    marginBottom: 0, // adjusted spacing below the logo
   },
   title: {
     fontSize: 28,
@@ -81,10 +84,11 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 40,
     textAlign: "center",
+    paddingHorizontal: 10,
   },
   buttonContainer: {
     width: "100%",
-    maxWidth: 300,
+    maxWidth: 350,
     gap: 16,
   },
   button: {
@@ -101,6 +105,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    marginBottom: 16, // for consistent spacing
   },
   primaryButton: {
     backgroundColor: "#5B9BD5",
