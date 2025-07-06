@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { useState, useRef } from "react";
+import { useState, useRef } from "react"
 import {
   Text,
   View,
@@ -13,8 +13,8 @@ import {
   Modal,
   TextInput,
   Animated,
-} from "react-native";
-import * as Speech from "expo-speech";
+} from "react-native"
+import * as Speech from "expo-speech"
 
 export default function AlarmScreen({ onBack }) {
   const [alarms, setAlarms] = useState([
@@ -32,106 +32,142 @@ export default function AlarmScreen({ onBack }) {
       time: "12:30",
       period: "PM",
       label: "Lunch break",
-      speechText:
-        "It's lunch time! Don't forget to take a break and eat something healthy.",
+      speechText: "It's lunch time! Don't forget to take a break and eat something healthy.",
       isActive: false,
       days: ["Daily"],
     },
-  ]);
-  const [showAddAlarm, setShowAddAlarm] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [newAlarmLabel, setNewAlarmLabel] = useState("New Alarm");
-  const [newAlarmSpeech, setNewAlarmSpeech] = useState(
-    "This is your reminder!"
-  );
-  const [selectedHour, setSelectedHour] = useState(9);
-  const [selectedMinute, setSelectedMinute] = useState(0);
-  const [selectedPeriod, setSelectedPeriod] = useState("AM");
-  const [selectedDays, setSelectedDays] = useState(["Daily"]);
-  const [headerTitle, setHeaderTitle] = useState("Set Reminder");
+  ])
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const hourScrollRef = useRef(null);
-  const minuteScrollRef = useRef(null);
-  const periodScrollRef = useRef(null);
+  const [showAddAlarm, setShowAddAlarm] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [newAlarmLabel, setNewAlarmLabel] = useState("New Alarm")
+  const [newAlarmSpeech, setNewAlarmSpeech] = useState("This is your reminder!")
+  const [selectedHour, setSelectedHour] = useState(9)
+  const [selectedMinute, setSelectedMinute] = useState(0)
+  const [selectedPeriod, setSelectedPeriod] = useState("AM")
+  const [selectedDays, setSelectedDays] = useState(["Daily"])
+  const [headerTitle, setHeaderTitle] = useState("Set Reminder")
 
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutes = Array.from({ length: 59 }, (_, i) => i + 1);
-  const periods = ["AM", "PM"];
-  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const scrollY = useRef(new Animated.Value(0)).current
+  const hourScrollRef = useRef(null)
+  const minuteScrollRef = useRef(null)
+  const periodScrollRef = useRef(null)
 
-  const ITEM_HEIGHT = 50;
+  // Create base arrays
+  const baseHours = Array.from({ length: 12 }, (_, i) => i + 1)
+  const baseMinutes = Array.from({ length: 60 }, (_, i) => i) // 0-59
+  const basePeriods = ["AM", "PM"]
 
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    {
-      useNativeDriver: false,
-      listener: (event) => {
-        const offsetY = event.nativeEvent.contentOffset.y;
-        if (offsetY > 200) {
-          setHeaderTitle("Your Reminders");
-        } else {
-          setHeaderTitle("Set Reminder");
-        }
-      },
-    }
-  );
+  // Create infinite arrays by repeating base arrays multiple times
+  const REPEAT_COUNT = 100 // Number of times to repeat each array
+  const hours = Array.from({ length: baseHours.length * REPEAT_COUNT }, (_, i) => baseHours[i % baseHours.length])
+  const minutes = Array.from(
+    { length: baseMinutes.length * REPEAT_COUNT },
+    (_, i) => baseMinutes[i % baseMinutes.length],
+  )
+  const periods = Array.from(
+    { length: basePeriods.length * REPEAT_COUNT },
+    (_, i) => basePeriods[i % basePeriods.length],
+  )
+
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const ITEM_HEIGHT = 50
+
+  // Calculate middle positions for initial scroll
+  const getMiddleIndex = (arrayLength, baseLength) => {
+    return Math.floor(arrayLength / 2) - Math.floor(baseLength / 2)
+  }
+
+  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+    useNativeDriver: false,
+    listener: (event) => {
+      const offsetY = event.nativeEvent.contentOffset.y
+      if (offsetY > 200) {
+        setHeaderTitle("Your Reminders")
+      } else {
+        setHeaderTitle("Set Reminder")
+      }
+    },
+  })
 
   const handleHourScroll = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const hour = hours[index];
+    const offsetY = event.nativeEvent.contentOffset.y
+    const index = Math.round(offsetY / ITEM_HEIGHT)
+    const hour = hours[index]
     if (hour && hour !== selectedHour) {
-      setSelectedHour(hour);
+      setSelectedHour(hour)
     }
-  };
+  }
 
   const handleMinuteScroll = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const minute = minutes[index];
+    const offsetY = event.nativeEvent.contentOffset.y
+    const index = Math.round(offsetY / ITEM_HEIGHT)
+    const minute = minutes[index]
     if (minute !== undefined && minute !== selectedMinute) {
-      setSelectedMinute(minute);
+      setSelectedMinute(minute)
     }
-  };
+  }
 
   const handlePeriodScroll = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const period = periods[index];
+    const offsetY = event.nativeEvent.contentOffset.y
+    const index = Math.round(offsetY / ITEM_HEIGHT)
+    const period = periods[index]
     if (period && period !== selectedPeriod) {
-      setSelectedPeriod(period);
+      setSelectedPeriod(period)
     }
-  };
+  }
+
+  // Initialize scroll positions to middle when modal opens
+  const initializeScrollPositions = () => {
+    setTimeout(() => {
+      // Find the middle positions and scroll to selected values
+      const hourMiddleIndex = getMiddleIndex(hours.length, baseHours.length)
+      const minuteMiddleIndex = getMiddleIndex(minutes.length, baseMinutes.length)
+      const periodMiddleIndex = getMiddleIndex(periods.length, basePeriods.length)
+
+      // Find current selected values in the middle section
+      const selectedHourIndex = hourMiddleIndex + baseHours.findIndex((h) => h === selectedHour)
+      const selectedMinuteIndex = minuteMiddleIndex + baseMinutes.findIndex((m) => m === selectedMinute)
+      const selectedPeriodIndex = periodMiddleIndex + basePeriods.findIndex((p) => p === selectedPeriod)
+
+      hourScrollRef.current?.scrollTo({
+        y: selectedHourIndex * ITEM_HEIGHT,
+        animated: false,
+      })
+      minuteScrollRef.current?.scrollTo({
+        y: selectedMinuteIndex * ITEM_HEIGHT,
+        animated: false,
+      })
+      periodScrollRef.current?.scrollTo({
+        y: selectedPeriodIndex * ITEM_HEIGHT,
+        animated: false,
+      })
+    }, 100)
+  }
 
   const toggleDay = (day) => {
     if (day === "Daily") {
-      setSelectedDays(["Daily"]);
+      setSelectedDays(["Daily"])
     } else {
-      let newDays = selectedDays.filter((d) => d !== "Daily");
+      let newDays = selectedDays.filter((d) => d !== "Daily")
       if (newDays.includes(day)) {
-        newDays = newDays.filter((d) => d !== day);
+        newDays = newDays.filter((d) => d !== day)
       } else {
-        newDays = [...newDays, day];
+        newDays = [...newDays, day]
       }
-
       if (newDays.length === 0) {
-        setSelectedDays(["Daily"]);
+        setSelectedDays(["Daily"])
       } else if (newDays.length === 7) {
-        setSelectedDays(["Daily"]);
+        setSelectedDays(["Daily"])
       } else {
-        setSelectedDays(newDays);
+        setSelectedDays(newDays)
       }
     }
-  };
+  }
 
   const toggleAlarm = (id) => {
-    setAlarms(
-      alarms.map((alarm) =>
-        alarm.id === id ? { ...alarm, isActive: !alarm.isActive } : alarm
-      )
-    );
-  };
+    setAlarms(alarms.map((alarm) => (alarm.id === id ? { ...alarm, isActive: !alarm.isActive } : alarm)))
+  }
 
   const deleteAlarm = (id) => {
     Alert.alert("Delete Alarm", "Are you sure you want to delete this alarm?", [
@@ -140,21 +176,21 @@ export default function AlarmScreen({ onBack }) {
         text: "Delete",
         onPress: () => setAlarms(alarms.filter((alarm) => alarm.id !== id)),
       },
-    ]);
-  };
+    ])
+  }
 
   const testSpeech = (speechText) => {
     Speech.speak(speechText, {
       language: "en-US",
       pitch: 1.0,
       rate: 0.8,
-    });
-  };
+    })
+  }
 
   const handleNFCScan = () => {
-    setIsScanning(true);
+    setIsScanning(true)
     setTimeout(() => {
-      setIsScanning(false);
+      setIsScanning(false)
       Alert.alert("NFC Tag Detected", "Creating alarm from NFC data...", [
         {
           text: "OK",
@@ -164,23 +200,20 @@ export default function AlarmScreen({ onBack }) {
               time: "08:30",
               period: "AM",
               label: "NFC Reminder",
-              speechText:
-                "Your NFC reminder is now active! Don't forget your scheduled task.",
+              speechText: "Your NFC reminder is now active! Don't forget your scheduled task.",
               isActive: true,
               days: ["Daily"],
-            };
-            setAlarms([...alarms, newAlarm]);
-            testSpeech(newAlarm.speechText);
+            }
+            setAlarms([...alarms, newAlarm])
+            testSpeech(newAlarm.speechText)
           },
         },
-      ]);
-    }, 2000);
-  };
+      ])
+    }, 2000)
+  }
 
   const addManualAlarm = () => {
-    const formattedTime = `${selectedHour
-      .toString()
-      .padStart(2, "0")}:${selectedMinute.toString().padStart(2, "0")}`;
+    const formattedTime = `${selectedHour.toString().padStart(2, "0")}:${selectedMinute.toString().padStart(2, "0")}`
     const newAlarm = {
       id: Date.now(),
       time: formattedTime,
@@ -189,38 +222,29 @@ export default function AlarmScreen({ onBack }) {
       speechText: newAlarmSpeech,
       isActive: true,
       days: selectedDays,
-    };
-    setAlarms([...alarms, newAlarm]);
-    setShowAddAlarm(false);
-    setNewAlarmLabel("New Alarm");
-    setNewAlarmSpeech("This is your reminder!");
-    setSelectedHour(9);
-    setSelectedMinute(0);
-    setSelectedPeriod("AM");
-    setSelectedDays(["Daily"]);
-
-    testSpeech(newAlarm.speechText);
-  };
+    }
+    setAlarms([...alarms, newAlarm])
+    setShowAddAlarm(false)
+    setNewAlarmLabel("New Alarm")
+    setNewAlarmSpeech("This is your reminder!")
+    setSelectedHour(9)
+    setSelectedMinute(0)
+    setSelectedPeriod("AM")
+    setSelectedDays(["Daily"])
+    testSpeech(newAlarm.speechText)
+  }
 
   const getRepeatText = (days) => {
     if (days.includes("Daily") || days.length === 7) {
-      return "Daily";
-    } else if (
-      days.length === 5 &&
-      !days.includes("Sat") &&
-      !days.includes("Sun")
-    ) {
-      return "Weekdays";
-    } else if (
-      days.length === 2 &&
-      days.includes("Sat") &&
-      days.includes("Sun")
-    ) {
-      return "Weekends";
+      return "Daily"
+    } else if (days.length === 5 && !days.includes("Sat") && !days.includes("Sun")) {
+      return "Weekdays"
+    } else if (days.length === 2 && days.includes("Sat") && days.includes("Sun")) {
+      return "Weekends"
     } else {
-      return days.join(", ");
+      return days.join(", ")
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -239,23 +263,19 @@ export default function AlarmScreen({ onBack }) {
         {/* Action Buttons Row */}
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.scanButton,
-              isScanning && styles.scanningButton,
-            ]}
+            style={[styles.actionButton, styles.scanButton, isScanning && styles.scanningButton]}
             onPress={handleNFCScan}
             disabled={isScanning}
           >
             <Text style={styles.actionButtonIcon}>📱</Text>
-            <Text style={styles.actionButtonText}>
-              {isScanning ? "Scanning..." : "NFC Scan"}
-            </Text>
+            <Text style={styles.actionButtonText}>{isScanning ? "Scanning..." : "NFC Scan"}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.actionButton, styles.manualButton]}
-            onPress={() => setShowAddAlarm(true)}
+            onPress={() => {
+              setShowAddAlarm(true)
+              initializeScrollPositions()
+            }}
           >
             <Text style={styles.actionButtonIcon}>⏰</Text>
             <Text style={styles.actionButtonText}>Manual</Text>
@@ -267,53 +287,19 @@ export default function AlarmScreen({ onBack }) {
 
         {/* Alarms Section */}
         <Text style={styles.sectionTitle}>Your Reminders</Text>
-
         {alarms.map((alarm) => (
           <View key={alarm.id} style={styles.alarmCard}>
             <View style={styles.alarmLeft}>
               <View style={styles.timeContainer}>
-                <Text
-                  style={[
-                    styles.alarmTime,
-                    !alarm.isActive && styles.inactiveTime,
-                  ]}
-                >
-                  {alarm.time}
-                </Text>
-                <Text
-                  style={[
-                    styles.alarmPeriod,
-                    !alarm.isActive && styles.inactiveTime,
-                  ]}
-                >
-                  {alarm.period}
-                </Text>
+                <Text style={[styles.alarmTime, !alarm.isActive && styles.inactiveTime]}>{alarm.time}</Text>
+                <Text style={[styles.alarmPeriod, !alarm.isActive && styles.inactiveTime]}>{alarm.period}</Text>
               </View>
-              <Text
-                style={[
-                  styles.alarmLabel,
-                  !alarm.isActive && styles.inactiveLabel,
-                ]}
-              >
-                {alarm.label}
-              </Text>
-              <Text
-                style={[
-                  styles.speechPreview,
-                  !alarm.isActive && styles.inactiveLabel,
-                ]}
-              >
+              <Text style={[styles.alarmLabel, !alarm.isActive && styles.inactiveLabel]}>{alarm.label}</Text>
+              <Text style={[styles.speechPreview, !alarm.isActive && styles.inactiveLabel]}>
                 🔊 "{alarm.speechText.substring(0, 50)}..."
               </Text>
               <View style={styles.daysContainer}>
-                <Text
-                  style={[
-                    styles.dayText,
-                    !alarm.isActive && styles.inactiveDay,
-                  ]}
-                >
-                  {getRepeatText(alarm.days)}
-                </Text>
+                <Text style={[styles.dayText, !alarm.isActive && styles.inactiveDay]}>{getRepeatText(alarm.days)}</Text>
               </View>
             </View>
             <View style={styles.alarmRight}>
@@ -324,16 +310,10 @@ export default function AlarmScreen({ onBack }) {
                 thumbColor={alarm.isActive ? "#ffffff" : "#f4f3f4"}
                 ios_backgroundColor="#E0E0E0"
               />
-              <TouchableOpacity
-                style={styles.testSpeechButton}
-                onPress={() => testSpeech(alarm.speechText)}
-              >
+              <TouchableOpacity style={styles.testSpeechButton} onPress={() => testSpeech(alarm.speechText)}>
                 <Text style={styles.testSpeechText}>🔊</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteIconButton}
-                onPress={() => deleteAlarm(alarm.id)}
-              >
+              <TouchableOpacity style={styles.deleteIconButton} onPress={() => deleteAlarm(alarm.id)}>
                 <Text style={styles.deleteIcon}>🗑️</Text>
               </TouchableOpacity>
             </View>
@@ -342,11 +322,7 @@ export default function AlarmScreen({ onBack }) {
       </Animated.ScrollView>
 
       {/* Add Alarm Modal */}
-      <Modal
-        visible={showAddAlarm}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
+      <Modal visible={showAddAlarm} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowAddAlarm(false)}>
@@ -362,7 +338,6 @@ export default function AlarmScreen({ onBack }) {
             {/* Scrollable Time Picker */}
             <View style={styles.timePickerContainer}>
               <Text style={styles.timePickerTitle}>Select Time</Text>
-
               {/* Scrollable Time Display */}
               <View style={styles.scrollableTimePicker}>
                 <View style={styles.timeScrollContainer}>
@@ -380,23 +355,17 @@ export default function AlarmScreen({ onBack }) {
                     >
                       {hours.map((hour, index) => (
                         <TouchableOpacity
-                          key={hour}
+                          key={`hour-${index}`}
                           style={styles.timeScrollItem}
                           onPress={() => {
-                            setSelectedHour(hour);
+                            setSelectedHour(hour)
                             hourScrollRef.current?.scrollTo({
                               y: index * ITEM_HEIGHT,
                               animated: true,
-                            });
+                            })
                           }}
                         >
-                          <Text
-                            style={[
-                              styles.timeScrollText,
-                              selectedHour === hour &&
-                                styles.selectedTimeScrollText,
-                            ]}
-                          >
+                          <Text style={[styles.timeScrollText, selectedHour === hour && styles.selectedTimeScrollText]}>
                             {hour.toString().padStart(2, "0")}
                           </Text>
                         </TouchableOpacity>
@@ -421,22 +390,18 @@ export default function AlarmScreen({ onBack }) {
                     >
                       {minutes.map((minute, index) => (
                         <TouchableOpacity
-                          key={minute}
+                          key={`minute-${index}`}
                           style={styles.timeScrollItem}
                           onPress={() => {
-                            setSelectedMinute(minute);
+                            setSelectedMinute(minute)
                             minuteScrollRef.current?.scrollTo({
                               y: index * ITEM_HEIGHT,
                               animated: true,
-                            });
+                            })
                           }}
                         >
                           <Text
-                            style={[
-                              styles.timeScrollText,
-                              selectedMinute === minute &&
-                                styles.selectedTimeScrollText,
-                            ]}
+                            style={[styles.timeScrollText, selectedMinute === minute && styles.selectedTimeScrollText]}
                           >
                             {minute.toString().padStart(2, "0")}
                           </Text>
@@ -446,7 +411,7 @@ export default function AlarmScreen({ onBack }) {
                   </View>
 
                   {/* Colon */}
-                  <Text style={styles.colonText}>:</Text>
+                  <Text style={styles.colonText}> </Text>
 
                   {/* Period Scroll */}
                   <View style={styles.timeScrollSection}>
@@ -462,22 +427,18 @@ export default function AlarmScreen({ onBack }) {
                     >
                       {periods.map((period, index) => (
                         <TouchableOpacity
-                          key={period}
+                          key={`period-${index}`}
                           style={styles.timeScrollItem}
                           onPress={() => {
-                            setSelectedPeriod(period);
+                            setSelectedPeriod(period)
                             periodScrollRef.current?.scrollTo({
                               y: index * ITEM_HEIGHT,
                               animated: true,
-                            });
+                            })
                           }}
                         >
                           <Text
-                            style={[
-                              styles.timeScrollText,
-                              selectedPeriod === period &&
-                                styles.selectedTimeScrollText,
-                            ]}
+                            style={[styles.timeScrollText, selectedPeriod === period && styles.selectedTimeScrollText]}
                           >
                             {period}
                           </Text>
@@ -486,7 +447,6 @@ export default function AlarmScreen({ onBack }) {
                     </ScrollView>
                   </View>
                 </View>
-
                 {/* Blue Underline */}
                 <View style={styles.timeUnderline} />
               </View>
@@ -515,10 +475,7 @@ export default function AlarmScreen({ onBack }) {
                   multiline
                   numberOfLines={3}
                 />
-                <TouchableOpacity
-                  style={styles.testButton}
-                  onPress={() => testSpeech(newAlarmSpeech)}
-                >
+                <TouchableOpacity style={styles.testButton} onPress={() => testSpeech(newAlarmSpeech)}>
                   <Text style={styles.testButtonText}>🔊 Test Speech</Text>
                 </TouchableOpacity>
               </View>
@@ -526,26 +483,15 @@ export default function AlarmScreen({ onBack }) {
               {/* Repeat Days Selection */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Repeat</Text>
-
                 {/* Daily Option */}
                 <TouchableOpacity
-                  style={[
-                    styles.dayOption,
-                    selectedDays.includes("Daily") && styles.selectedDayOption,
-                  ]}
+                  style={[styles.dayOption, selectedDays.includes("Daily") && styles.selectedDayOption]}
                   onPress={() => toggleDay("Daily")}
                 >
-                  <Text
-                    style={[
-                      styles.dayOptionText,
-                      selectedDays.includes("Daily") &&
-                        styles.selectedDayOptionText,
-                    ]}
-                  >
+                  <Text style={[styles.dayOptionText, selectedDays.includes("Daily") && styles.selectedDayOptionText]}>
                     Daily
                   </Text>
                 </TouchableOpacity>
-
                 {/* Individual Days - Horizontal Layout */}
                 <View style={styles.daysRow}>
                   {daysOfWeek.map((day) => (
@@ -553,18 +499,14 @@ export default function AlarmScreen({ onBack }) {
                       key={day}
                       style={[
                         styles.dayButton,
-                        selectedDays.includes(day) &&
-                          !selectedDays.includes("Daily") &&
-                          styles.selectedDayButton,
+                        selectedDays.includes(day) && !selectedDays.includes("Daily") && styles.selectedDayButton,
                       ]}
                       onPress={() => toggleDay(day)}
                     >
                       <Text
                         style={[
                           styles.dayButtonText,
-                          selectedDays.includes(day) &&
-                            !selectedDays.includes("Daily") &&
-                            styles.selectedDayButtonText,
+                          selectedDays.includes(day) && !selectedDays.includes("Daily") && styles.selectedDayButtonText,
                         ]}
                       >
                         {day}
@@ -572,10 +514,7 @@ export default function AlarmScreen({ onBack }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-
-                <Text style={styles.repeatSummary}>
-                  Selected: {getRepeatText(selectedDays)}
-                </Text>
+                <Text style={styles.repeatSummary}>Selected: {getRepeatText(selectedDays)}</Text>
               </View>
             </View>
           </ScrollView>
@@ -590,14 +529,12 @@ export default function AlarmScreen({ onBack }) {
               <Text style={styles.scanningIcon}>📡</Text>
             </View>
             <Text style={styles.scanningText}>Scanning for NFC/RFID...</Text>
-            <Text style={styles.scanningSubtext}>
-              Hold your device near the tag
-            </Text>
+            <Text style={styles.scanningSubtext}>Hold your device near the tag</Text>
           </View>
         </View>
       )}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -606,8 +543,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5DC",
   },
   headerContainer: {
-    paddingTop: Platform.OS === "ios" ? 35 : 20, // Reduced from 50/30
-    paddingBottom: 15, // Reduced from 20
+    paddingTop: Platform.OS === "ios" ? 35 : 20,
+    paddingBottom: 15,
     paddingHorizontal: 20,
     backgroundColor: "#F5F5DC",
     borderBottomWidth: 1,
@@ -626,8 +563,8 @@ const styles = StyleSheet.create({
   actionButtonsRow: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 15, // Reduced from 20
-    marginBottom: 20, // Reduced from 25
+    marginTop: 15,
+    marginBottom: 20,
   },
   actionButton: {
     flex: 1,
@@ -663,7 +600,7 @@ const styles = StyleSheet.create({
     color: "#5B9BD5",
   },
   spacer: {
-    height: 40, // Reduced from 100
+    height: 40,
   },
   sectionTitle: {
     fontSize: 20,
@@ -995,4 +932,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
   },
-});
+})
